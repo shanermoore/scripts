@@ -1,6 +1,7 @@
 ########################################################################################################################################
 # Move-CrossVC                                                                                                                         #
 # Updated by: Shane Moore 12/20/2019                                                                                                   #
+# Revision 1.1 12/26/2019                                                                                                              #
 # Core code by VMware and the PSxVCvMotion module link here: https://code.vmware.com/samples/2060/psxvcvmotion---cross-vcenter-vmotion #
 ########################################################################################################################################
 
@@ -226,9 +227,28 @@ write-host $toolsStatus
 sleep 3
 } until ( $toolsStatus -eq ‘toolsOk’ )
 
+#Update vmware tools 
+Write-Host " Checking and upgrading VMware Tools and VM Copatibility if nesessary" -ForegroundColor Yellow
+ Get-VM $vmname | % { get-view $_.id } |Where-Object {$_.Guest.ToolsVersionStatus -like "guestToolsNeedUpgrade"} |select name, @{Name=“ToolsVersion”; Expression={$_.config.tools.toolsversion}}, @{ Name=“ToolStatus”; Expression={$_.Guest.ToolsVersionStatus}}| Update-Tools -NoReboot -VM {$_.Name} -Verbose 
+
+#Check and Update VM Hardware/Compatibility
+$VMspec = New-Object -TypeName VMware.Vim.VirtualMachineConfigSpec
+$VMspec.ScheduledHardwareUpgradeInfo = New-Object -TypeName VMware.Vim.ScheduledHardwareUpgradeInfo
+$VMspec.ScheduledHardwareUpgradeInfo.UpgradePolicy = “onSoftPowerOff”
+$VMspec.ScheduledHardwareUpgradeInfo.VersionKey = “vmx-14”
+Get-VM -Name $vmname | %{$_.ExtensionData.ReconfigVM_Task($VMspec)}
+
+Write-Host " Rebooting $vmname after VM Compatibility Upgrade"
+Restart-VM -VM $vmname -Server $DestVC -Confirm:$false
+do {
+$toolsStatus = (Get-VM $vmname | Get-View).Guest.ToolsStatus
+write-host $toolsStatus
+sleep 3
+} until ( $toolsStatus -eq ‘toolsOk’ )
+
 $StopWatch.Stop()
 #Calculating Migration Time
-$migrationTime = ([math]::Round(($StopWatch.Elapsed).TotalMinutes ,2))
+$migrationTime = [math]::Round(($StopWatch.Elapsed).TotalMinutes ,2)
 
 Write-Host " $vm is ready to use. Migration is Complete" -ForegroundColor Green
 Write-Host " Total Migration time for $vmname was $migrationtime minutes" -ForegroundColor Cyan
