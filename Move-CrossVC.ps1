@@ -4,7 +4,8 @@
 # Revision 1.1 12/26/2019                                                                                                              #
 # Core code by VMware and the PSxVCvMotion module link here: https://code.vmware.com/samples/2060/psxvcvmotion---cross-vcenter-vmotion #
 ########################################################################################################################################
-
+Function Move-CrossVC
+{
 
 # making sure Pester is installed and Getting variable information
 Import-Module Pester
@@ -255,3 +256,5 @@ Write-Host " Total Migration time for $vmname was $migrationtime minutes" -Foreg
 sleep 2
 Write-Host " Disconnecting from vCenters $sourceVC and $destVC" -ForegroundColor Yellow
 Disconnect-VIServer -Server * -Confirm:$false
+
+}
