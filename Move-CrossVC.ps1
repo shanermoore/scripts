@@ -1,11 +1,12 @@
+Function Move-CrossVC
+{
 ########################################################################################################################################
 # Move-CrossVC                                                                                                                         #
 # Updated by: Shane Moore 12/20/2019                                                                                                   #
 # Revision 1.1 12/26/2019                                                                                                              #
+# Revision 1.2 1/8/2019                                                                                                                #
 # Core code by VMware and the PSxVCvMotion module link here: https://code.vmware.com/samples/2060/psxvcvmotion---cross-vcenter-vmotion #
 ########################################################################################################################################
-Function Move-CrossVC
-{
 
 # making sure Pester is installed and Getting variable information
 Import-Module Pester
@@ -29,7 +30,6 @@ $stopwatch.Start()
 
 #Creating connection to both vCenters
 Write-Host "Connecting to Source and Destination vCenters" -ForegroundColor Yellow
-
 Do {
     # Loop until we get a valid userid/password and can connect, or some other kind of error occurs
     $Cred = Get-Credential -Message "Enter $SourceVC Credentials"
@@ -46,7 +46,7 @@ Do {
         }
     }
     Else {
-        "User name and password are valid"
+        Read-Host "User name and password are valid"
         Connect-VIServer $SourceVC -Credential $Cred
     }
 }
@@ -68,11 +68,12 @@ Do {
         }
     }
     Else {
-        "User name and password are valid"
+       Read-Host "User name and password are valid"
         Connect-VIServer $destVC -Credential $Cred
     }
 }
 Until ($Err.Count -eq 0)
+
 
 
 $VM = Get-Cluster $sourceCluster -Server $sourceVC | Get-VM $vmname -Server $sourceVC -erroraction SilentlyContinue 
@@ -207,13 +208,14 @@ Catch{
 
 }
 
+Sleep 10
 $vm = Get-VM $vmname -Server $sourceVC
-$Destination = Get-VMHost -Location $destCluster  -Server $DestVC | Get-Random
+$Destination = Get-VMHost -Location $destCluster -Server $DestVC | Get-Random
 $NetworkAdapter = Get-NetworkAdapter -VM $vm -Server $sourceVC
 $VMPG = Get-VirtualPortGroup -VirtualSwitch $destSwitch -Name $DestPG -Server $destVC
 $DS = Get-Datastore -Name $destDS -Server $destVC
 
-Write-Host " Moving $vm from $sourceVC to $destVC. $vm will be in the $destCluster on host $destination. Please Stand By.." -ForegroundColor yellow
+Write-Host " Moving $vm from $sourceVC to $destVC. $vm will be in the $destCluster on host $destination. Please Stand By...." -ForegroundColor yellow
 
 Move-VM $vm -Destination $Destination -NetworkAdapter $NetworkAdapter -PortGroup $VMPG -Datastore $DS -Confirm:$false
 
@@ -231,13 +233,6 @@ sleep 3
 #Update vmware tools 
 Write-Host " Checking and upgrading VMware Tools and VM Copatibility if nesessary" -ForegroundColor Yellow
  Get-VM $vmname | % { get-view $_.id } |Where-Object {$_.Guest.ToolsVersionStatus -like "guestToolsNeedUpgrade"} |select name, @{Name=“ToolsVersion”; Expression={$_.config.tools.toolsversion}}, @{ Name=“ToolStatus”; Expression={$_.Guest.ToolsVersionStatus}}| Update-Tools -NoReboot -VM {$_.Name} -Verbose 
-
-#Check and Update VM Hardware/Compatibility
-$VMspec = New-Object -TypeName VMware.Vim.VirtualMachineConfigSpec
-$VMspec.ScheduledHardwareUpgradeInfo = New-Object -TypeName VMware.Vim.ScheduledHardwareUpgradeInfo
-$VMspec.ScheduledHardwareUpgradeInfo.UpgradePolicy = “onSoftPowerOff”
-$VMspec.ScheduledHardwareUpgradeInfo.VersionKey = “vmx-14”
-Get-VM -Name $vmname | %{$_.ExtensionData.ReconfigVM_Task($VMspec)}
 
 Write-Host " Rebooting $vmname after VM Compatibility Upgrade"
 Restart-VM -VM $vmname -Server $DestVC -Confirm:$false
