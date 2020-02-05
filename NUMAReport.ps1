@@ -41,7 +41,7 @@ ForEach ($c in $Clusters){
 
                 #Get list of all VMs in cluster that are oversized
                 $VMDeatils = @()
-                $VMDeatils = Get-VM -Location $c | where {$_.NumCpu -gt $y.Minimum -or $_.MemoryGB -gt $y.Minimum}
+                $VMDeatils = Get-VM -Location $c | where {$_.NumCpu -gt $y.Minimum -or $_.MemoryGB -gt $x.Minimum}
 
                 Write-host "Processing VM's in cluster for NUMA oversizing.." -ForegroundColor Magenta
                 Write-host ""
