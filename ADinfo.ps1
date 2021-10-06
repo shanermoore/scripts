@@ -3,7 +3,7 @@ $Workstations = (Get-ADComputer -LDAPFilter "(&(objectClass=Computer)(!operating
 $Servers = (Get-ADComputer -LDAPFilter "(&(objectClass=Computer)(operatingSystem=*server*))" -Searchbase (Get-ADDomain).distinguishedName).count
 $Users = (get-aduser -filter *).count 
 $domain = Get-ADDomain |FT Forest
-$FSMO = netdom query FSMO
+$FSMO = (netdom query FSMO)[0..4]
 $ADForest = (Get-ADForest).ForestMode
 $ADDomain = (Get-ADDomain).DomainMode
 $ADVer = Get-ADObject (Get-ADRootDSE).schemaNamingContext -property objectVersion | Select objectVersion
